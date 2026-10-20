@@ -12,13 +12,13 @@
 .start-playback-overlay{position:absolute;z-index:5;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:0;background:linear-gradient(transparent,#02050a38);color:#e9f1ff}.start-playback-overlay>span{width:62px;height:62px;border:1px solid #ffffff66;border-radius:50%;display:grid;place-items:center;background:#397cf6e8;color:white;font-size:20px;box-shadow:0 10px 35px #0008;transition:transform .18s}.start-playback-overlay:hover>span{transform:scale(1.08)}.start-playback-overlay strong{font:700 13px Manrope,sans-serif}.start-playback-overlay small{font-size:10px;color:#b5c6df}
 
 
-/* VIDEO-ONLY MODE: hide toolbar, share/reset/mute/fullscreen and metadata. */
+/* VIDEO-ONLY MODE: hide toolbar, share/reset/mute/fullscreen and metadata. 
 .player-topline,
 .player-controls,
 .video-details {
   display: none !important;
 }
-
+*/
 /* JW Player: controls:false in app.js is primary; these hide common UI elements. */
 #jwPlayerContainer .jw-controlbar,
 #jwPlayerContainer .jw-display,
