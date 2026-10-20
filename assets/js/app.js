@@ -2,6 +2,11 @@ import { db } from "./firebase.js";
 import { ref, onValue } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js";
 import { $, showNotice, recordEvent, validHttpUrl, formatNumber } from "./common.js";
 
+// Disable the browser context menu (right-click) on the player page.
+document.addEventListener("contextmenu", (event) => {
+  event.preventDefault();
+});
+
 const els = {
   siteName: $("#siteName"), footerSiteName: $("#footerSiteName"), year: $("#year"),
   heroTitle: $("#heroTitle"), heroDescription: $("#heroDescription"),
