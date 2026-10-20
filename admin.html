@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <title>Admin Console · Universal Video</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="./assets/css/styles.css">
+  <script src="./assets/js/config.js"></script>
+  <script type="module" src="./assets/js/admin.js"></script>
+</head>
+<body class="admin-body">
+  <header class="site-header">
+    <a class="brand" href="./"><span class="brand-mark"><i class="fa-solid fa-play"></i></span><span><strong>Universal Video</strong><small>Administration</small></span></a>
+    <div class="header-actions"><a class="button button-quiet" href="./"><i class="fa-solid fa-arrow-left"></i> View site</a><button class="button button-quiet" id="logoutBtn" hidden><i class="fa-solid fa-right-from-bracket"></i> Sign out</button></div>
+  </header>
+  <main class="admin-shell">
+    <section class="admin-welcome"><div><p class="eyebrow">CONTROL CENTER</p><h1>Video <span>management.</span></h1><p>Publish content, manage promotions, and review recorded engagement.</p></div><span class="secure-badge"><i class="fa-solid fa-lock"></i> Protected admin area</span></section>
+    <div class="notice" id="adminNotice" role="status" aria-live="polite" hidden></div>
+
+    <section class="auth-card" id="loginCard">
+      <div class="auth-icon"><i class="fa-solid fa-shield-halved"></i></div>
+      <h2>Admin sign in</h2><p>Sign in with the Firebase Authentication account that has been authorized as an administrator.</p>
+      <form id="loginForm">
+        <label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="username" required placeholder="admin@example.com">
+        <label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required placeholder="Your Firebase password">
+        <button class="button button-primary button-full" type="submit" id="loginBtn"><i class="fa-solid fa-right-to-bracket"></i> Sign in</button>
+      </form>
+      <p class="fine-print">There is no default password in this project. Create the account in Firebase Authentication and authorize its UID in Realtime Database rules.</p>
+    </section>
+
+    <div id="adminWorkspace" hidden>
+      <section class="metrics-grid">
+        <article class="metric-card"><span class="metric-icon blue"><i class="fa-solid fa-play"></i></span><span class="metric-label">Video starts</span><strong id="metricStarts">—</strong><small>Recorded player start events</small></article>
+        <article class="metric-card"><span class="metric-icon purple"><i class="fa-regular fa-eye"></i></span><span class="metric-label">Completions</span><strong id="metricCompletions">—</strong><small>Recorded completion events</small></article>
+        <article class="metric-card"><span class="metric-icon amber"><i class="fa-solid fa-bullhorn"></i></span><span class="metric-label">Ad impressions</span><strong id="metricImpressions">—</strong><small>Promotional ad impression events</small></article>
+        <article class="metric-card"><span class="metric-icon green"><i class="fa-solid fa-arrow-pointer"></i></span><span class="metric-label">Ad clicks</span><strong id="metricClicks">—</strong><small>Recorded promotional clicks</small></article>
+      </section>
+      <div class="admin-tabs" role="tablist" aria-label="Admin sections">
+        <button class="admin-tab active" data-tab="video" role="tab" aria-selected="true"><i class="fa-solid fa-film"></i> Video</button>
+        <button class="admin-tab" data-tab="ads" role="tab" aria-selected="false"><i class="fa-solid fa-rectangle-ad"></i> Ads</button>
+        <button class="admin-tab" data-tab="analytics" role="tab" aria-selected="false"><i class="fa-solid fa-chart-column"></i> Analytics</button>
+        <button class="admin-tab" data-tab="settings" role="tab" aria-selected="false"><i class="fa-solid fa-sliders"></i> Settings</button>
+      </div>
+
+      <section class="admin-panel-section active" id="tab-video">
+        <div class="section-heading"><div><h2>Published video</h2><p>Save a video configuration for every visitor.</p></div><span class="status-pill" id="publishStatus">NOT PUBLISHED</span></div>
+        <form id="videoForm" class="form-card">
+          <div class="form-grid">
+            <div class="field full"><label for="videoTitleInput">Video title *</label><input id="videoTitleInput" required maxlength="140" placeholder="Featured video"></div>
+            <div class="field full"><label for="videoUrlInput">Video URL *</label><input id="videoUrlInput" type="url" required placeholder="https://example.com/video.mp4"><small>Use a direct MP4/HLS URL or a JW Player media URL. For embeds, choose Embed source below.</small></div>
+            <div class="field"><label for="videoSourceInput">Source type</label><select id="videoSourceInput"><option value="auto">Auto detect (MP4/HLS/JW Player)</option><option value="jwplayer">JW Player</option><option value="direct">Direct MP4/HLS</option><option value="embed">Embed URL</option></select></div>
+            <div class="field"><label for="videoThumbnailInput">Thumbnail URL (optional)</label><input id="videoThumbnailInput" type="url" placeholder="https://example.com/thumbnail.jpg"></div>
+            <div class="field full"><label for="videoDescriptionInput">Description</label><textarea id="videoDescriptionInput" rows="3" maxlength="1500" placeholder="Tell viewers about this video…"></textarea></div>
+            <div class="field"><label for="videoCategoryInput">Category label</label><input id="videoCategoryInput" maxlength="60" placeholder="Featured video"></div>
+            <div class="field"><label for="vastTagInput">VAST tag URL (optional)</label><input id="vastTagInput" type="url" placeholder="https://ad-server.example/vast.xml"><small>Requires a compatible JW Player ad setup and license.</small></div>
+          </div>
+          <div class="form-actions"><label class="check-row"><input type="checkbox" id="videoPublishedInput"> <span>Publish this video to the public site</span></label><button class="button button-primary" type="submit"><i class="fa-solid fa-cloud-arrow-up"></i> Save video settings</button></div>
+        </form>
+      </section>
+
+      <section class="admin-panel-section" id="tab-ads">
+        <div class="section-heading"><div><h2>Promotional ads</h2><p>Create first-party image/video/text promotions and track recorded views and clicks.</p></div></div>
+        <form id="adForm" class="form-card">
+          <input type="hidden" id="adIdInput">
+          <div class="form-grid">
+            <div class="field"><label for="adNameInput">Campaign name *</label><input id="adNameInput" required maxlength="100" placeholder="Summer promotion"></div>
+            <div class="field"><label for="adPlacementInput">Placement</label><select id="adPlacementInput"><option value="preroll">Pre-roll overlay</option><option value="banner">Banner below player</option></select></div>
+            <div class="field full"><label for="adHeadlineInput">Headline *</label><input id="adHeadlineInput" required maxlength="120" placeholder="Discover our service"></div>
+            <div class="field full"><label for="adBodyInput">Description</label><textarea id="adBodyInput" rows="2" maxlength="500" placeholder="Short message for viewers"></textarea></div>
+            <div class="field"><label for="adCreativeTypeInput">Creative type</label><select id="adCreativeTypeInput"><option value="text">Text promotion</option><option value="image">Image</option><option value="video">Video</option></select></div>
+            <div class="field"><label for="adCreativeUrlInput">Creative URL (image/video)</label><input id="adCreativeUrlInput" type="url" placeholder="https://example.com/ad.mp4"></div>
+            <div class="field"><label for="adDestinationInput">Destination URL *</label><input id="adDestinationInput" type="url" required placeholder="https://example.com/offer"></div>
+            <div class="field"><label for="adDurationInput">Minimum display (seconds)</label><input id="adDurationInput" type="number" min="0" max="60" value="5"></div>
+            <div class="field"><label for="adSkipInput">Skip after (seconds; 0 = no skip)</label><input id="adSkipInput" type="number" min="0" max="60" value="5"></div>
+            <div class="field"><label class="check-row"><input type="checkbox" id="adActiveInput" checked><span>Campaign active</span></label></div>
+          </div>
+          <div class="form-actions"><button class="button button-quiet" type="button" id="clearAdBtn">Clear form</button><button class="button button-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Save campaign</button></div>
+        </form>
+        <div class="table-card"><div class="table-heading"><h3>Campaigns</h3><span id="campaignCount">0 campaigns</span></div><div class="table-wrap"><table><thead><tr><th>Campaign</th><th>Placement</th><th>Status</th><th>Impressions</th><th>Clicks</th><th>Actions</th></tr></thead><tbody id="campaignTableBody"><tr><td colspan="6" class="empty-cell">No campaigns yet.</td></tr></tbody></table></div></div>
+      </section>
+
+      <section class="admin-panel-section" id="tab-analytics">
+        <div class="section-heading"><div><h2>Analytics overview</h2><p>Realtime event counts and recent activity. Browser-reported events are estimates, not audited billing metrics.</p></div><button class="button button-quiet button-small" id="refreshAnalyticsBtn"><i class="fa-solid fa-rotate"></i> Refresh</button></div>
+        <div class="analytics-grid">
+          <div class="table-card"><div class="table-heading"><h3>Video events</h3><span>Recorded totals</span></div><div class="event-stats"><div><span>Starts</span><strong id="analyticsStarts">0</strong></div><div><span>25% progress</span><strong id="analytics25">0</strong></div><div><span>50% progress</span><strong id="analytics50">0</strong></div><div><span>75% progress</span><strong id="analytics75">0</strong></div><div><span>Completions</span><strong id="analyticsComplete">0</strong></div><div><span>Errors</span><strong id="analyticsErrors">0</strong></div></div></div>
+          <div class="table-card"><div class="table-heading"><h3>Ad engagement</h3><span>Recorded totals</span></div><div class="event-stats"><div><span>Impressions</span><strong id="analyticsImpressions">0</strong></div><div><span>Clicks</span><strong id="analyticsClicks">0</strong></div><div><span>CTR</span><strong id="analyticsCtr">0%</strong></div></div></div>
+        </div>
+        <div class="table-card"><div class="table-heading"><h3>Recent events</h3><span>Latest 50</span></div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Event</th><th>Video / campaign</th><th>Session</th></tr></thead><tbody id="eventsTableBody"><tr><td colspan="4" class="empty-cell">No events recorded.</td></tr></tbody></table></div></div>
+      </section>
+
+      <section class="admin-panel-section" id="tab-settings">
+        <div class="section-heading"><div><h2>Site settings</h2><p>Branding and playback defaults.</p></div></div>
+        <form id="settingsForm" class="form-card">
+          <div class="form-grid">
+            <div class="field"><label for="siteNameInput">Site name</label><input id="siteNameInput" maxlength="80" value="Universal Video"></div>
+            <div class="field"><label for="heroTitleInput">Homepage headline</label><input id="heroTitleInput" maxlength="140" value="Your video, beautifully delivered."></div>
+            <div class="field full"><label for="heroDescriptionInput">Homepage description</label><textarea id="heroDescriptionInput" rows="2" maxlength="300">A clean, responsive player for your published content.</textarea></div>
+            <div class="field"><label for="defaultMutedInput">Start muted by default</label><select id="defaultMutedInput"><option value="true">Yes (recommended for autoplay)</option><option value="false">No</option></select></div>
+            <div class="field"><label for="showViewCountInput">Show public view count</label><select id="showViewCountInput"><option value="true">Yes</option><option value="false">No</option></select></div>
+          </div>
+          <div class="form-actions"><button class="button button-primary" type="submit"><i class="fa-solid fa-check"></i> Save settings</button></div>
+        </form>
+        <div class="warning-box"><i class="fa-solid fa-triangle-exclamation"></i><div><strong>Security and analytics notes</strong><p>Never put service-account credentials in browser code. Admin authorization is controlled by the database rules. Public client-side event reporting can be manipulated; for paid ad billing or strict unique-view metrics, add a trusted event-ingestion endpoint with rate limiting and bot/fraud checks.</p></div></div>
+      </section>
+    </div>
+    <footer class="site-footer"><span>Universal Video · Admin</span><span>Firebase-backed publishing</span></footer>
+  </main>
+</body>
+</html>
