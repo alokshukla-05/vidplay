@@ -19,6 +19,9 @@
   display: none !important;
 }
 */
+#shareBtn {
+  display: none !important;
+}
 /* JW Player: controls:false in app.js is primary; these hide common UI elements. */
 #jwPlayerContainer .jw-controlbar,
 #jwPlayerContainer .jw-display,
