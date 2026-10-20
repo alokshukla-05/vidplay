@@ -74,7 +74,7 @@ async function loadPublishedVideo() {
       els.jw.hidden = false;
       const config = {
         file: videoConfig.url, title: videoConfig.title || "Featured video",
-        width: "100%", aspectratio: "16:9", controls: true,
+        width: "100%", aspectratio: "16:9", controls: false,
         autostart: false, mute: settings.defaultMuted !== false,
         displaytitle: false, stretching: "uniform"
       };
@@ -89,7 +89,13 @@ async function loadPublishedVideo() {
       player.on("time", e => recordProgress(e?.position, e?.duration));
       player.on("mute", e => updateMuteButton(Boolean(e.mute)));
     } else {
-      els.html5.hidden = false; els.html5.src = videoConfig.url; currentEngine = "html5";
+      els.html5.hidden = false;
+      els.html5.controls = false;
+      els.html5.setAttribute("playsinline", "");
+      els.html5.setAttribute("controlsList", "nodownload noplaybackrate noremoteplayback");
+      els.html5.disablePictureInPicture = true;
+      els.html5.src = videoConfig.url;
+      currentEngine = "html5";
       els.html5.muted = settings.defaultMuted !== false;
       els.html5.addEventListener("canplay", () => { setLoading(false); setStatus("READY"); els.startPlaybackBtn.hidden = false; }, { once: true });
       els.html5.addEventListener("error", () => playbackError("This browser could not play the source. Check the URL, CORS settings, and format."));
