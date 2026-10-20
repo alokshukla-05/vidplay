@@ -18,10 +18,12 @@ const els = {
   notice: $("#playerNotice"), startPlaybackBtn: $("#startPlaybackBtn"), adOverlay: $("#adOverlay"), adCountdown: $("#adCountdown"),
   adImage: $("#adCreativeImage"), adVideo: $("#adCreativeVideo"), adText: $("#adCreativeText"),
   adLink: $("#adCreativeLink"), skipAd: $("#skipAdBtn"), closeAd: $("#closeAdBtn"),
-  banner: $("#bannerAd"), bannerTitle: $("#bannerTitle"), bannerDescription: $("#bannerDescription"), bannerLink: $("#bannerLink")
+  banner: $("#bannerAd"), bannerTitle: $("#bannerTitle"), bannerDescription: $("#bannerDescription"), bannerLink: $("#bannerLink"),
+  bannerCreative: $("#bannerCreative"), bannerImage: $("#bannerCreativeImage"), bannerVideo: $("#bannerCreativeVideo")
 };
 let videoConfig = null, settings = {}, ads = {}, player = null, currentEngine = null;
 let viewCount = 0, hasStarted = false, completed = false, adTimer = null, activeAd = null, adImpressionRecorded = false;
+let nextMidrollAt = 300, adInProgress = false;
 const videoId = "featured";
 els.year.textContent = new Date().getFullYear();
 els.siteName.textContent = window.APP_CONFIG?.brandName || "Universal Video";
@@ -68,7 +70,7 @@ async function loadPublishedVideo() {
     els.placeholder.style.backgroundImage = `linear-gradient(#0b1220aa,#0b1220aa),url("${videoConfig.thumbnailUrl.replace(/["\\]/g, "")}")`;
     els.placeholder.style.backgroundSize = "cover"; els.placeholder.style.backgroundPosition = "center";
   } else els.placeholder.style.backgroundImage = "";
-  hasStarted = false; completed = false;
+  hasStarted = false; completed = false; nextMidrollAt = 300; adInProgress = false;
   try {
     const kind = sourceKind(videoConfig);
     if (kind === "embed") {
@@ -91,7 +93,10 @@ async function loadPublishedVideo() {
       player.on("play", () => onVideoStart());
       player.on("complete", () => { if (!completed) { completed = true; recordEvent("video_complete", { videoId }); } setStatus("COMPLETE"); });
       player.on("error", e => playbackError(e?.message || "JW Player could not play this source."));
-      player.on("time", e => recordProgress(e?.position, e?.duration));
+      player.on("time", e => {
+        recordProgress(e?.position, e?.duration);
+        maybeShowMidroll(Number(e?.position || 0));
+      });
       player.on("mute", e => updateMuteButton(Boolean(e.mute)));
     } else {
       els.html5.hidden = false;
@@ -106,7 +111,10 @@ async function loadPublishedVideo() {
       els.html5.addEventListener("error", () => playbackError("This browser could not play the source. Check the URL, CORS settings, and format."));
       els.html5.addEventListener("play", onVideoStart);
       els.html5.addEventListener("ended", () => { if (!completed) { completed = true; recordEvent("video_complete", { videoId }); } setStatus("COMPLETE"); });
-      els.html5.addEventListener("timeupdate", () => recordProgress(els.html5.currentTime, els.html5.duration));
+      els.html5.addEventListener("timeupdate", () => {
+        recordProgress(els.html5.currentTime, els.html5.duration);
+        maybeShowMidroll(els.html5.currentTime);
+      });
       updateMuteButton(els.html5.muted);
       setTimeout(() => { if (currentEngine === "html5" && els.html5.readyState < 2) { setLoading(false); els.startPlaybackBtn.hidden = false; } }, 7000);
     }
@@ -135,51 +143,127 @@ function resetPlayer() {
   setStatus("READY");
 }
 function setBannerAd(ad) {
-  if (!ad || !ad.active || ad.placement !== "banner") { els.banner.hidden = true; return; }
-  els.banner.hidden = false; els.bannerTitle.textContent = ad.headline || ad.name || "Sponsored";
+  if (!ad || !ad.active || ad.placement !== "banner") {
+    els.banner.hidden = true;
+    els.bannerImage.hidden = true;
+    els.bannerVideo.hidden = true;
+    els.bannerVideo.pause();
+    els.bannerVideo.removeAttribute("src");
+    els.bannerVideo.load();
+    els.bannerCreative.hidden = true;
+    return;
+  }
+  els.banner.hidden = false;
+  els.bannerTitle.textContent = ad.headline || ad.name || "Sponsored";
   els.bannerDescription.textContent = ad.body || "";
-  els.bannerLink.href = ad.destinationUrl;
+  els.bannerLink.href = validHttpUrl(ad.destinationUrl) ? ad.destinationUrl : "#";
   els.bannerLink.onclick = () => recordEvent("ad_click", { campaignId: ad.id, videoId });
+
+  els.bannerImage.hidden = true;
+  els.bannerVideo.hidden = true;
+  els.bannerVideo.pause();
+  els.bannerVideo.removeAttribute("src");
+  els.bannerVideo.load();
+  els.bannerCreative.hidden = true;
+
+  if (ad.creativeType === "image" && validHttpUrl(ad.creativeUrl)) {
+    els.bannerImage.src = ad.creativeUrl;
+    els.bannerImage.hidden = false;
+    els.bannerCreative.hidden = false;
+  } else if (ad.creativeType === "video" && validHttpUrl(ad.creativeUrl)) {
+    els.bannerVideo.src = ad.creativeUrl;
+    els.bannerVideo.hidden = false;
+    els.bannerCreative.hidden = false;
+    els.bannerVideo.play().catch(() => {});
+  }
   recordAdImpression(ad);
 }
 function recordAdImpression(ad) {
   // One event per displayed campaign per page session; client-side events are not fraud-proof.
   const key = `uvp_ad_seen_${ad.id}`;
-  if (sessionStorage.getItem(key)) return;
-  sessionStorage.setItem(key, "1"); recordEvent("ad_impression", { campaignId: ad.id, videoId });
+  try {
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+  } catch { /* Continue showing ads when browser storage is unavailable. */ }
+  recordEvent("ad_impression", { campaignId: ad.id, videoId });
 }
 function showPreRoll(ad) {
   if (!ad || !ad.active || ad.placement !== "preroll") return Promise.resolve();
   return new Promise(resolve => {
-    activeAd = ad; adImpressionRecorded = false;
-    els.adOverlay.hidden = false; els.adLink.href = ad.destinationUrl;
+    if (adTimer) { clearInterval(adTimer); adTimer = null; }
+    activeAd = ad; adImpressionRecorded = false; adInProgress = true;
+    els.adOverlay.hidden = false; els.adLink.href = validHttpUrl(ad.destinationUrl) ? ad.destinationUrl : "#";
     els.adImage.hidden = true; els.adVideo.hidden = true; els.adText.textContent = "";
     els.skipAd.hidden = true; els.closeAd.hidden = true;
-    if (ad.creativeType === "image" && validHttpUrl(ad.creativeUrl)) { els.adImage.src = ad.creativeUrl; els.adImage.hidden = false; }
-    else if (ad.creativeType === "video" && validHttpUrl(ad.creativeUrl)) { els.adVideo.src = ad.creativeUrl; els.adVideo.hidden = false; els.adVideo.muted = true; els.adVideo.play().catch(() => {}); }
-    else { els.adText.textContent = `${ad.headline || ad.name || "Sponsored"}${ad.body ? "\n" + ad.body : ""}`; }
+    els.adVideo.pause(); els.adVideo.removeAttribute("src"); els.adVideo.load();
+
+    if (ad.creativeType === "image" && validHttpUrl(ad.creativeUrl)) {
+      els.adImage.src = ad.creativeUrl; els.adImage.hidden = false;
+    } else if (ad.creativeType === "video" && validHttpUrl(ad.creativeUrl)) {
+      els.adVideo.src = ad.creativeUrl; els.adVideo.hidden = false; els.adVideo.muted = true;
+      els.adVideo.play().catch(() => {});
+    } else {
+      els.adText.textContent = `${ad.headline || ad.name || "Sponsored"}${ad.body ? "\\n" + ad.body : ""}`;
+    }
     els.adLink.onclick = () => recordEvent("ad_click", { campaignId: ad.id, videoId });
     recordAdImpression(ad); adImpressionRecorded = true;
-    let remaining = Math.max(0, Math.min(60, Number(ad.durationSeconds || 5)));
+
+    const duration = Math.max(0, Math.min(60, Number(ad.durationSeconds ?? 5)));
     const skipAfter = Math.max(0, Math.min(60, Number(ad.skipAfterSeconds ?? 5)));
+    let elapsed = 0;
     const update = () => {
+      const remaining = Math.max(0, duration - elapsed);
       els.adCountdown.textContent = remaining > 0 ? `Video starts in ${remaining}s` : "Sponsored";
-      if (skipAfter > 0 && (Number(ad.durationSeconds || 5) - remaining) >= skipAfter) els.skipAd.hidden = false;
-      if (remaining <= 0 && skipAfter === 0) els.closeAd.hidden = false;
-      if (remaining <= 0 && skipAfter > 0) els.skipAd.hidden = false;
+      els.skipAd.hidden = !(skipAfter > 0 && elapsed >= skipAfter && elapsed >= duration);
+      els.closeAd.hidden = !(skipAfter === 0 && elapsed >= duration);
     };
+    let finished = false;
     const finish = () => {
-      clearInterval(adTimer); adTimer = null; els.adOverlay.hidden = true; els.adVideo.pause(); els.adVideo.removeAttribute("src"); els.adVideo.load(); resolve();
+      if (finished) return;
+      finished = true;
+      clearInterval(adTimer); adTimer = null;
+      els.adOverlay.hidden = true; els.adVideo.pause(); els.adVideo.removeAttribute("src"); els.adVideo.load();
+      activeAd = null; adInProgress = false; resolve();
     };
     els.skipAd.onclick = finish; els.closeAd.onclick = finish;
     update();
-    adTimer = setInterval(() => { remaining--; update(); if (remaining <= 0 && skipAfter === 0) finish(); }, 1000);
+    if (duration === 0) {
+      if (skipAfter === 0) finish();
+      else { els.skipAd.hidden = false; }
+    } else {
+      adTimer = setInterval(() => {
+        elapsed += 1; update();
+        if (elapsed >= duration && skipAfter === 0) finish();
+      }, 1000);
+    }
   });
+}
+function getActivePrerollAd() {
+  return Object.entries(ads || {}).map(([id, item]) => ({ ...item, id }))
+    .find(a => a && a.active && a.placement === "preroll");
+}
+async function maybeShowMidroll(position) {
+  if (!hasStarted || adInProgress || !Number.isFinite(position) || position < nextMidrollAt) return;
+  const ad = getActivePrerollAd();
+  // Advance the checkpoint before awaiting the ad, so timeupdate events cannot trigger duplicates.
+  nextMidrollAt += 300;
+  if (!ad) return;
+  adInProgress = true;
+  try {
+    if (currentEngine === "html5") els.html5.pause();
+    else if (currentEngine === "jw" && player) player.pause();
+    await showPreRoll(ad);
+    if (currentEngine === "html5") await els.html5.play().catch(() => {});
+    else if (currentEngine === "jw" && player) player.play();
+  } catch (error) {
+    console.warn("Mid-roll ad could not be shown:", error);
+    adInProgress = false;
+  }
 }
 async function startPlayback() {
   if (!videoConfig?.published || !currentEngine) return;
   els.startPlaybackBtn.hidden = true;
-  const ad = Object.entries(ads || {}).map(([id, item]) => ({ ...item, id })).find(a => a && a.active && a.placement === "preroll");
+  const ad = getActivePrerollAd();
   if (ad) await showPreRoll(ad);
   if (currentEngine === "html5") els.html5.play().catch(() => { els.startPlaybackBtn.hidden = false; showNotice(els.notice, "Tap play in the player to start playback.", "info"); });
   else if (currentEngine === "jw" && player) player.play();
