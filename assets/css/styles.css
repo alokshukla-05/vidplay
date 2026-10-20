@@ -10,3 +10,30 @@
 @media(max-width:520px){.site-header{height:68px;padding:0 15px}.brand strong{font-size:13px}.brand small{font-size:10px}.header-actions{gap:4px}.header-actions .button{padding:9px 10px;font-size:10px}.nav-link{display:none}.page-shell,.admin-shell{width:calc(100% - 26px)}.hero{padding:35px 0 22px}.hero h1{letter-spacing:-1.3px}.hero-copy{font-size:13px}.sidebar{grid-template-columns:1fr}.video-stage{min-height:200px}.player-engine{min-height:200px}.player-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:10px;gap:6px}.player-controls .button{padding:9px 4px;font-size:10px}.video-details{padding:16px}.video-details h2{font-size:17px}.banner-ad{align-items:start;flex-direction:column}.banner-ad .button{width:100%}.site-footer{flex-direction:column;padding-top:26px}.admin-tabs{margin-left:-2px;margin-right:-2px}.admin-tab{padding:10px;font-size:10px}.admin-tab i{margin-right:4px}.form-card{padding:16px}.form-grid{grid-template-columns:1fr;gap:14px}.field.full{grid-column:auto}.form-actions{align-items:stretch;flex-direction:column}.form-actions .button{width:100%}.metrics-grid{gap:9px}.metric-card{padding:13px}.metric-card strong{font-size:23px}.metric-card small{line-height:1.5}.auth-card{padding:22px}.section-heading{align-items:start;flex-direction:column}.section-heading .button{align-self:start}.event-stats{padding:12px;gap:8px}.event-stats>div{padding:10px}.player-topline{padding:12px}.status-pill{font-size:8px}.player-label{font-size:10px}}
 
 .start-playback-overlay{position:absolute;z-index:5;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:0;background:linear-gradient(transparent,#02050a38);color:#e9f1ff}.start-playback-overlay>span{width:62px;height:62px;border:1px solid #ffffff66;border-radius:50%;display:grid;place-items:center;background:#397cf6e8;color:white;font-size:20px;box-shadow:0 10px 35px #0008;transition:transform .18s}.start-playback-overlay:hover>span{transform:scale(1.08)}.start-playback-overlay strong{font:700 13px Manrope,sans-serif}.start-playback-overlay small{font-size:10px;color:#b5c6df}
+
+
+/* VIDEO-ONLY MODE: hide toolbar, share/reset/mute/fullscreen and metadata. */
+.player-topline,
+.player-controls,
+.video-details {
+  display: none !important;
+}
+
+/* JW Player: controls:false in app.js is primary; these hide common UI elements. */
+#jwPlayerContainer .jw-controlbar,
+#jwPlayerContainer .jw-display,
+#jwPlayerContainer .jw-settings-menu,
+#jwPlayerContainer .jw-icon-inline,
+#jwPlayerContainer .jw-icon-tooltip {
+  display: none !important;
+}
+
+.video-stage {
+  border-radius: 0;
+  background: #000;
+}
+.player-engine {
+  object-fit: contain;
+}
+
+/* The central start overlay remains so a user can start playback if autoplay is blocked. */
