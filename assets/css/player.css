@@ -182,5 +182,3 @@ video::cue{background:rgba(0,0,0,.72);color:#fff}
 .chapter-item.active{color:var(--accent);font-weight:700}
 .chapter-item .ct{font-variant-numeric:tabular-nums;color:var(--muted);min-width:50px}
 @media (max-width:640px){.stage-slot .video-stage.mini{width:56vw;right:10px}.pl-thumb{width:84px}}
-
-.drive-block{position:absolute;top:0;right:0;width:76px;height:64px;z-index:4;background:transparent}
