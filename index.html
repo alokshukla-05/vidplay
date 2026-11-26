@@ -4,6 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b1020">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./assets/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./assets/icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <title>Universal Video Player</title>
   <meta name="description" content="Watch videos with a clean, distraction-free custom player.">
   <meta property="og:title" content="Universal Video Player">
@@ -28,6 +33,7 @@
       <span class="brand-text"><strong id="siteName">Universal Video</strong><small>Watch something good</small></span>
     </a>
     <nav class="header-actions" aria-label="Main navigation">
+      <button class="button button-quiet" id="installBtn" hidden><i class="fa-solid fa-download"></i><span class="hide-sm">Install app</span></button>
       <button class="icon-button" id="themeBtn" aria-label="Toggle theme" title="Toggle theme"><i class="fa-solid fa-circle-half-stroke"></i></button>
       <a class="button button-quiet" href="./admin.html"><i class="fa-solid fa-shield-halved"></i><span class="hide-sm">Admin</span></a>
     </nav>
@@ -43,12 +49,14 @@
     <div class="content-grid" id="grid">
       <section class="main-column" id="player">
         <div class="player-card">
+          <div class="stage-slot" id="stageSlot">
           <div class="video-stage idle-off" id="videoStage" tabindex="-1">
             <div class="video-placeholder" id="videoPlaceholder">
               <div class="placeholder-icon"><i class="fa-solid fa-film"></i></div>
               <h2 id="placeholderTitle">Your next watch starts here</h2>
               <p id="placeholderText">The administrator has not published a video yet.</p>
               <button class="button button-primary" id="retryBtn" hidden><i class="fa-solid fa-rotate"></i> Try again</button>
+              <form class="gate-form" id="gateForm" hidden><input id="gateInput" type="password" placeholder="Access code" autocomplete="off" required><button class="button button-primary" type="submit"><i class="fa-solid fa-lock-open"></i> Unlock</button></form>
             </div>
 
             <div id="jwPlayerContainer" class="player-engine" hidden></div>
@@ -60,23 +68,32 @@
             <div class="shield" id="shield" hidden></div>
             <div class="skip-hint left" id="hintL"><i class="fa-solid fa-backward"></i> 10s</div>
             <div class="skip-hint right" id="hintR">10s <i class="fa-solid fa-forward"></i></div>
+            <img class="watermark" id="watermark" alt="" hidden>
+            <button class="mini-close" id="miniClose" aria-label="Close mini player"><i class="fa-solid fa-xmark"></i></button>
 
             <div class="player-loading" id="playerLoading" hidden><span class="spinner"></span><span>Preparing your video…</span></div>
             <div class="buffering" id="buffering" hidden><span class="spinner"></span></div>
             <button class="start-playback-overlay" id="startPlaybackBtn" hidden aria-label="Play video"><span><i class="fa-solid fa-play"></i></span></button>
 
             <div class="controls" id="controls" hidden>
-              <input type="range" id="seek" class="seek" min="0" max="1000" value="0" step="1" aria-label="Seek">
+              <div class="seek-wrap"><input type="range" id="seek" class="seek" min="0" max="1000" value="0" step="1" aria-label="Seek"><div class="chapter-marks" id="chapterMarks"></div><div class="seek-tip" id="seekTip" hidden></div></div>
               <div class="ctrl-row">
                 <div class="ctrl-group">
                   <button class="ctl" id="playBtn" aria-label="Play/Pause"><i class="fa-solid fa-play"></i></button>
+                  <button class="ctl hide-sm" id="prevBtn" aria-label="Previous video" hidden><i class="fa-solid fa-backward-step"></i></button>
+                  <button class="ctl hide-sm" id="nextBtn" aria-label="Next video" hidden><i class="fa-solid fa-forward-step"></i></button>
                   <button class="ctl hide-sm" id="backBtn" aria-label="Back 10 seconds"><i class="fa-solid fa-rotate-left"></i></button>
                   <button class="ctl hide-sm" id="fwdBtn" aria-label="Forward 10 seconds"><i class="fa-solid fa-rotate-right"></i></button>
                   <button class="ctl" id="muteBtn" aria-label="Mute"><i class="fa-solid fa-volume-high"></i></button>
                   <input type="range" id="volume" class="volume hide-sm" min="0" max="1" step="0.05" value="1" aria-label="Volume">
                   <span class="time" id="timeLabel">0:00 / 0:00</span>
+                  <span class="chapter-label hide-md" id="chapterLabel"></span>
                 </div>
                 <div class="ctrl-group">
+                  <div class="menu-wrap" id="ccWrap" hidden>
+                    <button class="ctl" id="ccBtn" aria-label="Subtitles"><i class="fa-regular fa-closed-captioning"></i></button>
+                    <div class="menu" id="ccMenu" hidden></div>
+                  </div>
                   <div class="menu-wrap" id="qualityWrap" hidden>
                     <button class="ctl txt" id="qualityBtn" aria-label="Quality">Auto</button>
                     <div class="menu" id="qualityMenu" hidden></div>
@@ -104,12 +121,14 @@
               </div>
             </div>
           </div>
+          </div>
 
           <div class="video-details">
             <div class="details-top">
               <div class="chips"><span class="status-pill" id="playbackStatus">READY</span><span class="player-label" id="videoCategory">Featured video</span></div>
               <div class="detail-actions">
                 <button class="button button-quiet button-small" id="shareBtn"><i class="fa-solid fa-arrow-up-from-bracket"></i> Share</button>
+                <button class="button button-quiet button-small" id="shareTimeBtn" hidden><i class="fa-regular fa-clock"></i> Share at 0:00</button>
                 <button class="button button-quiet button-small" id="resetBtn"><i class="fa-solid fa-rotate-left"></i> Restart</button>
               </div>
             </div>
@@ -131,6 +150,14 @@
       </section>
 
       <aside class="sidebar">
+        <section class="side-card" id="playlistCard" hidden>
+          <div class="pl-head"><h2><i class="fa-solid fa-list"></i> Up next</h2><label class="auto-toggle"><input type="checkbox" id="autoNextToggle" checked> Autoplay</label></div>
+          <div class="pl-list" id="playlistList"></div>
+        </section>
+        <section class="side-card" id="chaptersCard" hidden>
+          <h2><i class="fa-solid fa-bookmark"></i> Chapters</h2>
+          <div class="chapter-list" id="chapterList"></div>
+        </section>
         <section class="side-card">
           <h2><i class="fa-solid fa-keyboard"></i> Keyboard shortcuts</h2>
           <ul class="shortcuts">
@@ -138,6 +165,8 @@
             <li><kbd>J</kbd> <kbd>L</kbd> or <kbd>←</kbd> <kbd>→</kbd><span>Seek ±10s</span></li>
             <li><kbd>↑</kbd> <kbd>↓</kbd><span>Volume</span></li>
             <li><kbd>M</kbd><span>Mute</span></li>
+            <li><kbd>C</kbd><span>Captions on/off</span></li>
+            <li><kbd>N</kbd> <kbd>P</kbd><span>Next / previous video</span></li>
             <li><kbd>F</kbd><span>Fullscreen</span></li>
             <li><kbd>T</kbd><span>Theater mode</span></li>
             <li><kbd>&lt;</kbd> <kbd>&gt;</kbd><span>Speed</span></li>
