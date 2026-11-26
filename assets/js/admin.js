@@ -70,7 +70,7 @@ $("#videoForm").addEventListener("submit", async e => {
     vastTagUrl, published: $("#videoPublishedInput").checked,
     updatedAt: Date.now(), updatedBy: currentUser.uid
   };
-  try { await set(ref(db, "public/video"), data); showNotice(notice, "Video settings saved. Public viewers will receive the latest published configuration.", "success"); }
+  try { Object.assign(data, await window.UVP_EXTRA?.video?.() || {}); await set(ref(db, "public/video"), data); showNotice(notice, "Video settings saved. Public viewers will receive the latest published configuration.", "success"); }
   catch (err) { showNotice(notice, errorMessage(err), "error"); }
 });
 function populateSettings(s) {
@@ -83,6 +83,7 @@ function populateSettings(s) {
 $("#settingsForm").addEventListener("submit", async e => {
   e.preventDefault();
   const data = { siteName: $("#siteNameInput").value.trim() || "Universal Video", heroTitle: $("#heroTitleInput").value.trim(), heroDescription: $("#heroDescriptionInput").value.trim(), defaultMuted: $("#defaultMutedInput").value === "true", showViewCount: $("#showViewCountInput").value === "true", updatedAt: Date.now() };
+  Object.assign(data, window.UVP_EXTRA?.settings?.() || {});
   try { await set(ref(db, "public/settings"), data); showNotice(notice, "Site settings saved.", "success"); }
   catch (err) { showNotice(notice, errorMessage(err), "error"); }
 });
