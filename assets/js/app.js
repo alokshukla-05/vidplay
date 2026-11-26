@@ -16,7 +16,7 @@ const els = Object.fromEntries([
   "shareBtn","resetBtn","themeBtn","grid","playerNotice","adOverlay","adCountdown","adCreativeImage","adCreativeVideo","adCreativeText",
   "adCreativeLink","skipAdBtn","closeAdBtn","bannerAd","bannerTitle","bannerDescription","bannerLink","bannerCreative","bannerCreativeImage","bannerCreativeVideo",
   "watermark","miniClose","stageSlot","ccBtn","ccMenu","ccWrap","prevBtn","nextBtn","chapterLabel","chapterMarks","seekTip",
-  "gateForm","gateInput","shareTimeBtn","playlistCard","autoNextToggle","playlistList","chapterList","chaptersCard","installBtn"
+  "gateForm","gateInput","shareTimeBtn","playlistCard","autoNextToggle","playlistList","chapterList","chaptersCard","installBtn","driveBlock"
 ].map(id => [id, document.getElementById(id)]));
 
 let cfg = null, settings = {}, ads = {};
@@ -45,6 +45,7 @@ const loadScript = src => loaded[src] ??= new Promise((res, rej) => {
   const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.append(s);
 });
 const ytId = url => (url.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})/) || [])[1] || null;
+const driveId = url => (url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:.*&)?id=)([\w-]+)/) || [])[1] || null;
 const isHls = url => /\.m3u8($|\?)/i.test(url);
 const posKey = () => `uvp_pos_${cfg?.id}`;
 const setStatus = t => { els.playbackStatus.textContent = t; };
@@ -167,7 +168,7 @@ function teardown() {
   A?.destroy(); A = null; engine = null;
   els.embedPlayer.src = "about:blank"; els.embedPlayer.hidden = true;
   [els.shield, els.controls, els.buffering, els.startPlaybackBtn].forEach(e => e.hidden = true);
-  els.qualityWrap.hidden = true; els.pipBtn.hidden = true; els.ccWrap.hidden = true; clearInterval(schedTimer);
+  els.qualityWrap.hidden = true; els.pipBtn.hidden = true; els.ccWrap.hidden = true; els.driveBlock.hidden = true; clearInterval(schedTimer);
 }
 function playbackError(msg) {
   setLoading(false); teardown(); setStatus("ERROR");
@@ -175,6 +176,8 @@ function playbackError(msg) {
   recordEvent("video_error", { videoId }); showNotice(els.playerNotice, msg, "error");
 }
 function sourceKind(c) {
+  if (/drive\.google\.com\/file\/d\/[^/]+\/preview/.test(c.url)) return "embed";
+  if (/googleapis\.com\/drive\/v3\/files/.test(c.url)) return "direct";
   if (ytId(c.url)) return "youtube";
   if (c.sourceType === "embed" || /vimeo\.com|dailymotion\.com/i.test(c.url)) return "embed";
   if (c.sourceType === "jwplayer") return window.jwplayer ? "jwplayer" : "direct";
@@ -203,7 +206,10 @@ async function loadPublishedVideo() {
   if (cfg.scheduledAt && Number(cfg.scheduledAt) > Date.now()) { showCountdown(); return; }
   const gk = gateKey(cfg);
   if (cfg.gate && !unlocked[gk]) { setPlaceholder(true, "This video is locked", "Enter the access code to watch.", false, true); setStatus("LOCKED"); return; }
-  const src = cfg.gate ? unlocked[gk] : cfg.url;
+  let src = cfg.gate ? unlocked[gk] : cfg.url;
+  // Google Drive: with an API key we stream the file in our own player; without one we fall back to Drive's embed.
+  const did = driveId(src), driveKey = window.APP_CONFIG?.driveApiKey;
+  if (did) src = driveKey ? `https://www.googleapis.com/drive/v3/files/${did}?alt=media&key=${driveKey}` : `https://drive.google.com/file/d/${did}/preview`;
   setLoading(true); setPlaceholder(false); setStatus("LOADING");
   const saved = Number(store.get(posKey()));
   resumeAt = deepT > 0 ? deepT : saved > 5 ? saved : 0; deepT = 0;
@@ -236,7 +242,7 @@ async function loadPublishedVideo() {
     engine = kind;
     if (kind === "embed") {
       // Third-party embeds (e.g. Vimeo) can't be controlled from outside: they keep their own controls.
-      els.embedPlayer.hidden = false; els.embedPlayer.src = src;
+      els.embedPlayer.hidden = false; els.embedPlayer.src = src; els.driveBlock.hidden = !/drive\.google\.com/.test(src);
       els.embedPlayer.addEventListener("load", () => { setLoading(false); setStatus("EMBED"); }, { once: true });
       showNotice(els.playerNotice, "This source is a third-party embed, so its own controls are used.", "info");
     } else if (kind === "youtube") { A = await youtubeAdapter(ytId(src), cb); cb.ready(); }
