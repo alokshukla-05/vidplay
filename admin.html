@@ -7,8 +7,10 @@
   <title>Admin Console · Universal Video</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <link rel="stylesheet" href="./assets/css/styles.css">
+  <link rel="stylesheet" href="./assets/css/admin-extra.css">
   <script src="./assets/js/config.js"></script>
   <script type="module" src="./assets/js/admin.js"></script>
+  <script type="module" src="./assets/js/admin-extra.js"></script>
 </head>
 <body class="admin-body">
   <header class="site-header">
@@ -39,6 +41,7 @@
       </section>
       <div class="admin-tabs" role="tablist" aria-label="Admin sections">
         <button class="admin-tab active" data-tab="video" role="tab" aria-selected="true"><i class="fa-solid fa-film"></i> Video</button>
+        <button class="admin-tab" data-tab="playlist" role="tab" aria-selected="false"><i class="fa-solid fa-list"></i> Playlist</button>
         <button class="admin-tab" data-tab="ads" role="tab" aria-selected="false"><i class="fa-solid fa-rectangle-ad"></i> Ads</button>
         <button class="admin-tab" data-tab="analytics" role="tab" aria-selected="false"><i class="fa-solid fa-chart-column"></i> Analytics</button>
         <button class="admin-tab" data-tab="settings" role="tab" aria-selected="false"><i class="fa-solid fa-sliders"></i> Settings</button>
@@ -55,9 +58,35 @@
             <div class="field full"><label for="videoDescriptionInput">Description</label><textarea id="videoDescriptionInput" rows="3" maxlength="1500" placeholder="Tell viewers about this video…"></textarea></div>
             <div class="field"><label for="videoCategoryInput">Category label</label><input id="videoCategoryInput" maxlength="60" placeholder="Featured video"></div>
             <div class="field"><label for="vastTagInput">VAST tag URL (optional)</label><input id="vastTagInput" type="url" placeholder="https://ad-server.example/vast.xml"><small>Requires a compatible JW Player ad setup and license.</small></div>
+            <div class="field full"><label for="videoSubsInput">Subtitles (optional)</label><textarea id="videoSubsInput" rows="3" placeholder="English | en | https://example.com/en.vtt"></textarea><small>One per line: Label | language code | .vtt URL. Works for MP4/HLS; the .vtt host must allow CORS.</small></div>
+            <div class="field full"><label for="videoChaptersInput">Chapters (optional)</label><textarea id="videoChaptersInput" rows="3" placeholder="0:00 Intro&#10;1:30 Main topic"></textarea><small>One per line: time, then title.</small></div>
+            <div class="field"><label for="videoScheduleInput">Go live at (optional)</label><input id="videoScheduleInput" type="datetime-local"><small>Needs "Publish" ticked. Visitors see a countdown until then.</small></div>
+            <div class="field"><label for="videoCodeInput">Access code (optional)</label><input id="videoCodeInput" type="text" autocomplete="off" placeholder="Empty = public video"><small id="videoGateHint">The URL is encrypted with this code (needs https). Re-enter URL and code on every save.</small></div>
           </div>
           <div class="form-actions"><label class="check-row"><input type="checkbox" id="videoPublishedInput"> <span>Publish this video to the public site</span></label><button class="button button-primary" type="submit"><i class="fa-solid fa-cloud-arrow-up"></i> Save video settings</button></div>
         </form>
+      </section>
+
+      <section class="admin-panel-section" id="tab-playlist">
+        <div class="section-heading"><div><h2>Playlist</h2><p>Extra videos shown under "Up next". The main video in the Video tab stays first.</p></div></div>
+        <form id="plForm" class="form-card">
+          <input type="hidden" id="plId">
+          <div class="form-grid">
+            <div class="field full"><label for="plTitle">Title *</label><input id="plTitle" required maxlength="140"></div>
+            <div class="field full"><label for="plUrl">Video URL *</label><input id="plUrl" type="url" required placeholder="https://youtu.be/... or .mp4 / .m3u8"></div>
+            <div class="field"><label for="plSource">Source type</label><select id="plSource"><option value="auto">Auto detect</option><option value="jwplayer">JW Player</option><option value="direct">Direct MP4/HLS</option><option value="embed">Embed URL</option></select></div>
+            <div class="field"><label for="plThumb">Thumbnail URL (optional)</label><input id="plThumb" type="url"></div>
+            <div class="field full"><label for="plDesc">Description</label><textarea id="plDesc" rows="2" maxlength="1500"></textarea></div>
+            <div class="field"><label for="plCategory">Category label</label><input id="plCategory" maxlength="60"></div>
+            <div class="field"><label for="plOrder">Order (small = first)</label><input id="plOrder" type="number" step="1" placeholder="auto"></div>
+            <div class="field full"><label for="plSubs">Subtitles (optional)</label><textarea id="plSubs" rows="2" placeholder="English | en | https://example.com/en.vtt"></textarea></div>
+            <div class="field full"><label for="plChapters">Chapters (optional)</label><textarea id="plChapters" rows="2" placeholder="0:00 Intro&#10;1:30 Main topic"></textarea></div>
+            <div class="field"><label for="plSchedule">Go live at (optional)</label><input id="plSchedule" type="datetime-local"></div>
+            <div class="field"><label for="plCode">Access code (optional)</label><input id="plCode" type="text" autocomplete="off" placeholder="Empty = public"><small>Re-enter URL and code on every save to keep the lock.</small></div>
+          </div>
+          <div class="form-actions"><label class="check-row"><input type="checkbox" id="plPublished" checked> <span>Published</span></label><div><button class="button button-quiet" type="button" id="plClear">Clear form</button> <button class="button button-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Save to playlist</button></div></div>
+        </form>
+        <div class="table-card"><div class="table-heading"><h3>Playlist items</h3><span id="plCount">0 items</span></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Title</th><th>Status</th><th>Public views</th><th>Actions</th></tr></thead><tbody id="plBody"><tr><td colspan="5" class="empty-cell">No playlist items yet.</td></tr></tbody></table></div></div>
       </section>
 
       <section class="admin-panel-section" id="tab-ads">
@@ -88,6 +117,11 @@
           <div class="table-card"><div class="table-heading"><h3>Ad engagement</h3><span>Recorded totals</span></div><div class="event-stats"><div><span>Impressions</span><strong id="analyticsImpressions">0</strong></div><div><span>Clicks</span><strong id="analyticsClicks">0</strong></div><div><span>CTR</span><strong id="analyticsCtr">0%</strong></div></div></div>
         </div>
         <div class="table-card"><div class="table-heading"><h3>Recent events</h3><span>Latest 50</span></div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Event</th><th>Video / campaign</th><th>Session</th></tr></thead><tbody id="eventsTableBody"><tr><td colspan="4" class="empty-cell">No events recorded.</td></tr></tbody></table></div></div>
+        <div class="analytics-grid">
+          <div class="table-card"><div class="table-heading"><h3>Last 14 days</h3><span><i class="dot-blue"></i> Starts &nbsp; <i class="dot-purple"></i> Completions</span></div><div class="chart-box" id="trendChart"></div></div>
+          <div class="table-card"><div class="table-heading"><h3>Viewer retention</h3><span id="retentionNote">Starts → completion</span></div><div class="funnel" id="funnel"></div></div>
+        </div>
+        <div class="table-card"><div class="table-heading"><h3>Top videos</h3><span id="publicViewsTotal">Public views: 0</span></div><div class="table-wrap"><table><thead><tr><th>Video</th><th>Public views</th><th>Starts</th><th>Completions</th><th>Completion rate</th></tr></thead><tbody id="topVideosBody"><tr><td colspan="5" class="empty-cell">No data yet.</td></tr></tbody></table></div></div>
       </section>
 
       <section class="admin-panel-section" id="tab-settings">
@@ -99,6 +133,10 @@
             <div class="field full"><label for="heroDescriptionInput">Homepage description</label><textarea id="heroDescriptionInput" rows="2" maxlength="300">A clean, responsive player for your published content.</textarea></div>
             <div class="field"><label for="defaultMutedInput">Start muted by default</label><select id="defaultMutedInput"><option value="true">Yes (recommended for autoplay)</option><option value="false">No</option></select></div>
             <div class="field"><label for="showViewCountInput">Show public view count</label><select id="showViewCountInput"><option value="true">Yes</option><option value="false">No</option></select></div>
+            <div class="field"><label for="wmUrlInput">Watermark logo URL</label><input id="wmUrlInput" type="url" placeholder="https://example.com/logo.png"></div>
+            <div class="field"><label for="wmPosInput">Watermark position</label><select id="wmPosInput"><option value="tr">Top right</option><option value="tl">Top left</option><option value="br">Bottom right</option><option value="bl">Bottom left</option></select></div>
+            <div class="field"><label for="wmOpacityInput">Watermark opacity (0.1 – 1)</label><input id="wmOpacityInput" type="number" min="0.1" max="1" step="0.1" value="0.7"></div>
+            <div class="field"><label for="miniPlayerInput">Mini player on scroll</label><select id="miniPlayerInput"><option value="true">On</option><option value="false">Off</option></select></div>
           </div>
           <div class="form-actions"><button class="button button-primary" type="submit"><i class="fa-solid fa-check"></i> Save settings</button></div>
         </form>
