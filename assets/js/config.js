@@ -13,7 +13,7 @@ window.APP_CONFIG = {
   messagingSenderId: "1053791458330",
   appId: "1:1053791458330:web:fdbf5befa79aef2376eda3"
   },
-  driveApiKey: "TUMHARI_KEY",
+  
   jwPlayerLibraryUrl: "", // Example shape only: https://cdn.jwplayer.com/libraries/YOUR_LIBRARY_ID.js
   analytics: {
     enabled: true,
