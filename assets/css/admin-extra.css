@@ -1,0 +1,13 @@
+.chart-box{padding:14px 16px 8px;overflow-x:auto}
+.chart-box svg{width:100%;min-width:520px;height:auto;display:block}
+.chart-box text{fill:#7f90ab;font-size:10px}
+.dot-blue,.dot-purple{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+.dot-blue{background:#5b8cff}.dot-purple{background:#a06cff}
+.funnel{padding:16px 18px;display:grid;gap:12px}
+.funnel .row{display:grid;gap:5px;font-size:11px;color:#c1cee2}
+.funnel .row span{display:flex;justify-content:space-between}
+.funnel .bar{height:9px;border-radius:6px;background:#0d1625;overflow:hidden}
+.funnel .bar i{display:block;height:100%;background:linear-gradient(90deg,#5b8cff,#a06cff);border-radius:6px}
+.table-card+.analytics-grid,.analytics-grid+.table-card{margin-top:18px}
+#plBody .text-button{margin-right:4px}
+@media(max-width:800px){.analytics-grid{grid-template-columns:1fr}}
